@@ -195,6 +195,7 @@ local lp = game:GetService("Players").LocalPlayer
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local autoAcceptPhone = true
 local interactActive = true        -- AUTO ON
 local remoteInteractActive = true  -- AUTO ON
 local promptConnection = nil 
@@ -787,6 +788,7 @@ buatTombol("Chat /man", function()
         end)
     end
 end)
+
 buatTombol("Lobby / Area Telepon", function() teleportTo("Spawn") end)
 buatTombol("Ruang Listrik (Lantai 2)", function() teleportTo(CFrame.new(25.66, 17.65, -59.71)) end)
 buatTombol("Pintu Penyimpanan (Lantai 2)", function() teleportTo(CFrame.new(73.40, 17.78, -49.91)) end)
@@ -1053,3 +1055,33 @@ task.spawn(function()
 end)
 
 mainFrame.Visible = true
+
+-- Fungsi untuk menelusuri dan memicu prompt
+local function fireAllPrompts()
+    local folderNames = {
+        "RuangArsip", "RuangDokter", "RuangDuka", "RuangElektrikal", 
+        "RuangKM", "RuangKremasi", "RuangMandi", "RuangMayat", 
+        "RuangMusholla", "RuangPasien", "RuangPenyiapan", "RuangPenyimpanan"
+    }
+
+    for _, name in pairs(folderNames) do
+        local folder = game.Workspace:FindFirstChild(name)
+        if folder then
+            for _, item in pairs(folder:GetDescendants()) do
+                if item:IsA("ProximityPrompt") then
+                    -- Memicu prompt
+                    item:InputHoldBegin()
+                    item:InputHoldEnd()
+                end
+            end
+        end
+    end
+end
+
+-- Loop utama untuk menjalankan fungsi setiap sekian detik
+task.spawn(function()
+    while true do
+        fireAllPrompts()
+        task.wait(0.1) -- Sesuaikan waktu jeda (dalam detik) agar tidak membuat lag
+    end
+end)
