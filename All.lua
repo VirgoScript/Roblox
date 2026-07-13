@@ -604,8 +604,8 @@ settingLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     settingScroll.CanvasSize = UDim2.new(0, 0, 0, settingLayout.AbsoluteContentSize.Y + 10)
 end)
 
-local antiAfkEnabled = false
-local autoReconnectEnabled = false
+local antiAfkEnabled = true
+local autoReconnectEnabled = true
 
 local function createToggle(text, layoutOrder, defaultState, callback)
     local frame = Instance.new("Frame")
@@ -662,8 +662,8 @@ local function createToggle(text, layoutOrder, defaultState, callback)
     end)
 end
 
-createToggle("📜 Enable Anti-AFK", 1, false, function(state) antiAfkEnabled = state end)
-createToggle("🔄 Auto Reconnect", 2, false, function(state) autoReconnectEnabled = state end)
+createToggle("📜 Enable Anti-AFK", 1, true, function(state) antiAfkEnabled = state end)
+createToggle("🔄 Auto Reconnect", 2, true, function(state) autoReconnectEnabled = state end)
 -- Tombol Tambahan untuk Teleport
 local teleportBtn = Instance.new("TextButton")
 teleportBtn.Size = UDim2.new(1, 0, 0, 32)
