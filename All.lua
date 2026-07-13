@@ -664,7 +664,93 @@ end
 
 createToggle("📜 Enable Anti-AFK", 1, false, function(state) antiAfkEnabled = state end)
 createToggle("🔄 Auto Reconnect", 2, false, function(state) autoReconnectEnabled = state end)
+-- Tombol Tambahan untuk Teleport
+local teleportBtn = Instance.new("TextButton")
+teleportBtn.Size = UDim2.new(1, 0, 0, 32)
+teleportBtn.BackgroundColor3 = COL_ACCENT -- Menggunakan warna tema aktif
+teleportBtn.Text = "🚀 Open Teleport Hub"
+teleportBtn.Font = Enum.Font.GothamBold
+teleportBtn.TextSize = 11
+teleportBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+teleportBtn.LayoutOrder = 2.5 -- Agar posisinya di antara Toggle dan Tema
+teleportBtn.ZIndex = 2
+teleportBtn.Parent = settingScroll
+Instance.new("UICorner", teleportBtn).CornerRadius = UDim.new(0, 6)
+animStroke(teleportBtn, 1)
+themeObjectsToUpdate[teleportBtn] = "BackgroundColor3"
 
+teleportBtn.MouseButton1Click:Connect(function()
+    showNotify("Executing...", "Menjalankan Teleport Hub...", 2)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/Teleport.lua"))()
+    end)
+end)
+-- Tombol Tambahan untuk Remote Detector
+local remoteBtn = Instance.new("TextButton")
+remoteBtn.Size = UDim2.new(1, 0, 0, 32)
+remoteBtn.BackgroundColor3 = COL_ACCENT 
+remoteBtn.Text = "🔍 Open Remote Detector"
+remoteBtn.Font = Enum.Font.GothamBold
+remoteBtn.TextSize = 11
+remoteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+remoteBtn.LayoutOrder = 2.6 -- Diposisikan tepat di bawah Teleport Hub
+remoteBtn.ZIndex = 2
+remoteBtn.Parent = settingScroll
+Instance.new("UICorner", remoteBtn).CornerRadius = UDim.new(0, 6)
+animStroke(remoteBtn, 1)
+themeObjectsToUpdate[remoteBtn] = "BackgroundColor3"
+
+remoteBtn.MouseButton1Click:Connect(function()
+    showNotify("Executing...", "Menjalankan Remote Detector...", 2)
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/oxireun/User/refs/heads/main/RemoteDetector.lua"))()
+    end)
+end)
+-- Tombol Tambahan untuk Smart Server Hop
+local hopBtn = Instance.new("TextButton")
+local visitedServers = {}
+table.insert(visitedServers, game.JobId)
+hopBtn.Size = UDim2.new(1, 0, 0, 32)
+hopBtn.BackgroundColor3 = COL_ACCENT 
+hopBtn.Text = "🔄 Smart Server Hop"
+hopBtn.Font = Enum.Font.GothamBold
+hopBtn.TextSize = 11
+hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+hopBtn.LayoutOrder = 2.7 -- Berada di bawah Remote Detector
+hopBtn.ZIndex = 2
+hopBtn.Parent = settingScroll
+Instance.new("UICorner", hopBtn).CornerRadius = UDim.new(0, 6)
+animStroke(hopBtn, 1)
+themeObjectsToUpdate[hopBtn] = "BackgroundColor3"
+
+hopBtn.MouseButton1Click:Connect(function()
+    showNotify("Server Hop", "Mencari server paling ramai...", 2)
+    
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    
+    -- Mengambil daftar server dengan urutan Descending (dari pemain terbanyak ke terkecil)
+    local function getServerList()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+        local response = request({Url = url, Method = "GET"})
+        return HttpService:JSONDecode(response.Body)
+    end
+
+    local success, result = pcall(getServerList)
+    if success and result and result.data then
+        for _, server in pairs(result.data) do
+            -- Memastikan tidak pindah ke JobId saat ini dan server tidak penuh
+            if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, Players.LocalPlayer)
+                return
+            end
+        end
+    end
+    
+    -- Fallback: Jika tidak ditemukan server lain, mencoba server baru secara random
+    TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+end)
 local themeFrame = Instance.new("Frame")
 themeFrame.Size = UDim2.new(1, 0, 0, 55)
 themeFrame.BackgroundColor3 = COL_PANEL
