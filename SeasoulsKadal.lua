@@ -26,7 +26,6 @@ local gui = Instance.new("ScreenGui", coreGui); gui.Name = "AceSniperUI"
 local FULL_H = 225; local MINI_H = 42
 local main = Instance.new("Frame", gui); main.Size = UDim2.new(0, 290, 0, FULL_H); main.Position = UDim2.new(0.5, -145, 0.4, -42 // 2); main.BackgroundColor3 = COL_BG; main.BackgroundTransparency = 0.15; main.BorderSizePixel = 0; main.Active = true; Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10); animStroke(main, 1.5)
 
--- Elemen UI (Header, TP Game, Navigasi, Input, Auto TP)
 local title = Instance.new("TextLabel", main); title.Size = UDim2.new(1, -40, 0, 16); title.Position = UDim2.new(0, 12, 0, 8); title.BackgroundTransparency = 1; title.Text = "SEASOULS FIND KADAL"; title.Font = Enum.Font.GothamBlack; title.TextSize = 11.5; title.TextColor3 = Color3.new(1, 1, 1); title.TextXAlignment = Enum.TextXAlignment.Left
 local tpBtn = Instance.new("TextButton", main); tpBtn.Size = UDim2.new(1, -24, 0, 30); tpBtn.Position = UDim2.new(0, 12, 0, 45); tpBtn.BackgroundColor3 = MIN_NORMAL; tpBtn.Text = "TELEPORT KE GAME"; tpBtn.TextColor3 = Color3.new(1, 1, 1); tpBtn.Font = Enum.Font.GothamBold; tpBtn.TextSize = 12; tpBtn.BorderSizePixel = 0; Instance.new("UICorner", tpBtn).CornerRadius = UDim.new(0, 5); animStroke(tpBtn, 1)
 tpBtn.MouseButton1Click:Connect(function() teleportService:Teleport(89114927420451) end)
@@ -39,34 +38,69 @@ local inputFrame = Instance.new("Frame", main); inputFrame.Size = UDim2.new(1, -
 local numInput = Instance.new("TextBox", inputFrame); numInput.Size = UDim2.new(0.65, 0, 1, 0); numInput.BackgroundColor3 = MIN_NORMAL; numInput.PlaceholderText = "Angka (cth: 02)"; numInput.Text = "1"; numInput.TextColor3 = Color3.new(1, 1, 1); numInput.Font = Enum.Font.Gotham; numInput.TextSize = 12; numInput.BorderSizePixel = 0; Instance.new("UICorner", numInput).CornerRadius = UDim.new(0, 5); animStroke(numInput, 1)
 local goBtn = Instance.new("TextButton", inputFrame); goBtn.Size = UDim2.new(0.32, 0, 1, 0); goBtn.Position = UDim2.new(0.68, 0, 0, 0); goBtn.Text = "GO"; goBtn.BackgroundColor3 = MIN_NORMAL; goBtn.TextColor3 = Color3.new(1, 1, 1); goBtn.Font = Enum.Font.GothamBold; goBtn.TextSize = 12; goBtn.BorderSizePixel = 0; Instance.new("UICorner", goBtn).CornerRadius = UDim.new(0, 5); animStroke(goBtn, 1)
 
--- Logika Utama Sinkronisasi
+-- LOGIKA PERBAIKAN
 local currentIndex = 1
+
+-- 1. Mengambil list dan mengurutkannya agar urutan 1, 2, 3 konsisten
 local function getBorondonList()
     local list = {}
     local folder = workspace:FindFirstChild("SeasoulsPlaces") and workspace.SeasoulsPlaces:FindFirstChild("SanBorondon")
-    if folder then for _, obj in pairs(folder:GetChildren()) do if string.find(obj.Name, "Borondon") then table.insert(list, obj) end end end
+    if folder then
+        for _, obj in pairs(folder:GetChildren()) do
+            -- Filter: Harus mengandung "Borondon" DAN harus punya angka di namanya
+            if string.find(obj.Name, "Borondon") and string.match(obj.Name, "%d+") then
+                table.insert(list, obj)
+            end
+        end
+    end
+    
+    -- Urutkan berdasarkan angka agar indeks 1, 2, 3 konsisten
+    table.sort(list, function(a, b)
+        local numA = tonumber(a.Name:match("%d+"))
+        local numB = tonumber(b.Name:match("%d+"))
+        return numA < numB
+    end)
     return list
 end
 
+-- 2. Fungsi Teleportasi berbasis Indeks (Untuk Next, Prev, dan Input)
 local function teleportTo(index)
     local list = getBorondonList()
-    if #list > 0 then
-        if index > #list then index = 1 elseif index < 1 then index = #list end
-        currentIndex = index
-        local target = list[currentIndex]
-        -- Sinkronisasi teks input dengan angka objek
-        local _, _, num = string.find(target.Name, "(%d+)")
-        numInput.Text = num or tostring(currentIndex)
+    
+    -- CEK: Jika list kosong atau tidak ada objek di index tersebut, batalkan proses
+    if #list == 0 then 
+        warn("List kosong, tidak ada objek untuk teleport!") 
+        return 
+    end
+    
+    -- Pastikan index berada dalam jangkauan list yang tersedia saja
+    local targetIndex = math.clamp(index, 1, #list)
+    local target = list[targetIndex]
+    
+    -- CEK: Pastikan target benar-benar ada sebelum teleport
+    if target then
+        currentIndex = targetIndex -- Update index hanya jika target ditemukan
+        
+        numInput.Text = tostring(targetIndex)
         
         local lp = players.LocalPlayer
-        if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then lp.Character.HumanoidRootPart.CFrame = target:IsA("Model") and target:GetPivot() or target.CFrame end
+        if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+            lp.Character.HumanoidRootPart.CFrame = target:IsA("Model") and target:GetPivot() or target.CFrame
+        end
+    else
+        warn("Objek pada index " .. index .. " tidak ditemukan di workspace!")
     end
 end
 
+-- 3. Koneksi Tombol (Semuanya memanggil fungsi yang sama)
 prevBtn.MouseButton1Click:Connect(function() teleportTo(currentIndex - 1) end)
 nextBtn.MouseButton1Click:Connect(function() teleportTo(currentIndex + 1) end)
-goBtn.MouseButton1Click:Connect(function() teleportTo(tonumber(numInput.Text) or 1) end)
-
+goBtn.MouseButton1Click:Connect(function() 
+    local inputVal = tonumber(numInput.Text)
+    if inputVal then
+        teleportTo(inputVal)
+    end
+end)
 -- Auto TP
 local autoTpEnabled = false
 local autoTpBtn = Instance.new("TextButton", main); autoTpBtn.Size = UDim2.new(1, -24, 0, 30); autoTpBtn.Position = UDim2.new(0, 12, 0, 150); autoTpBtn.BackgroundColor3 = MIN_NORMAL; autoTpBtn.Text = "AUTO TP: OFF"; autoTpBtn.TextColor3 = Color3.fromRGB(255, 100, 100); autoTpBtn.Font = Enum.Font.GothamBold; autoTpBtn.TextSize = 12; autoTpBtn.BorderSizePixel = 0; Instance.new("UICorner", autoTpBtn).CornerRadius = UDim.new(0, 5); animStroke(autoTpBtn, 1)
