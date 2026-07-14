@@ -42,6 +42,10 @@ local listMap = {
         Nama = "👩‍🦰 Kingdom of essentia Tycoon",
         Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/Essentia.lua"))()]]
     },
+    {
+        Nama = "🐠 Find The Seasouls",
+        Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/SeasoulsKadal.lua"))()]]
+    },
 }
 -- ====================================================
 
