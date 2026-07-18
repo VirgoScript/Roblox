@@ -43,6 +43,10 @@ local listMap = {
         Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/Essentia.lua"))()]]
     },
     {
+        Nama = "🎁 Lucky Box",
+        Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoboyScript/Script/refs/heads/main/LuckyBox.lua"))()]]
+    },
+    {
         Nama = "🐠 Find The Seasouls",
         Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/SeasoulsKadal.lua"))()]]
     },
