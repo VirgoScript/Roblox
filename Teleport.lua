@@ -1,9 +1,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "🚀 TELEPORT | VIRGOBOY ",
+   Name = "🚀 TELEPORT | VIRGOBOY (MOBILE PERFECT)",
    LoadingTitle = "VIRGOBOY SCRIPT",
-   LoadingSubtitle = "Loading.....",
+   LoadingSubtitle = "Loading Mobile Optimized...",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "HyperToolV3",
@@ -34,10 +34,18 @@ local cam = workspace.CurrentCamera
 
 -- Variables Control
 local freecamEnabled = false
-local fSpeed = 2.2
+local fSpeed = 2.5
 local rotX, rotY = 0, 0
 local dragSens = 0.4
 local targetFOV = 70
+
+-- Movement State
+local moveForward = false
+local moveBackward = false
+local moveLeft = false
+local moveRight = false
+local moveUp = false
+local moveDown = false
 
 local speedEnabled = false
 local walkSpeedValue = 16 
@@ -46,8 +54,15 @@ local targetPlayerName = ""
 local coordInputText = ""
 local cctvTarget = ""
 
--- Anti AFK Global Settings
 getgenv().AutoReconnect = true
+
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+    elseif toclipboard then
+        toclipboard(text)
+    end
+end
 
 -- === LOGIC FUNCTIONS ===
 local function RejoinServer()
@@ -81,13 +96,74 @@ local function ServerHop()
     until not Next
 end
 
--- Fungsi Mematikan Input Karakter agar tidak jalan di tempat
 local function FreezeCharacter(bool)
     if bool then
         CAS:BindAction("FreecamFreeze", function() return Enum.ContextActionResult.Sink end, false, 
             Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D, Enum.KeyCode.Space)
     else
         CAS:UnbindAction("FreecamFreeze")
+    end
+end
+
+-- === MOBILE CONTROLS GUI ===
+local mobileGui = nil
+local function CreateMobileControls(state)
+    local CoreGui = Player:FindFirstChildOfClass("PlayerGui") or Player:WaitForChild("PlayerGui")
+    if state then
+        if mobileGui then mobileGui:Destroy() end
+        
+        mobileGui = Instance.new("ScreenGui")
+        mobileGui.Name = "FreecamMobileControls"
+        mobileGui.ResetOnSpawn = false
+        mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        mobileGui.Parent = CoreGui
+
+        local function createBtn(name, text, pos, size, callbackDown, callbackUp)
+            local btn = Instance.new("TextButton")
+            btn.Name = name
+            btn.Text = text
+            btn.Size = size
+            btn.Position = pos
+            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            btn.BackgroundTransparency = 0.4
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextSize = 20
+            btn.BorderSizePixel = 0
+            btn.ZIndex = 10
+            btn.Parent = mobileGui
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0.5, 0)
+            corner.Parent = btn
+
+            btn.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    callbackDown()
+                end
+            end)
+
+            btn.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    callbackUp()
+                end
+            end)
+        end
+
+        -- Tombol D-Pad Kiri Bawah untuk Navigasi Maju/Mundur/Kiri/Kanan
+        createBtn("ForwardBtn", "▲", UDim2.new(0.12, 0, 0.52, 0), UDim2.new(0, 48, 0, 48), function() moveForward = true end, function() moveForward = false end)
+        createBtn("BackwardBtn", "▼", UDim2.new(0.12, 0, 0.74, 0), UDim2.new(0, 48, 0, 48), function() moveBackward = true end, function() moveBackward = false end)
+        createBtn("LeftBtn", "◀", UDim2.new(0.04, 0, 0.63, 0), UDim2.new(0, 48, 0, 48), function() moveLeft = true end, function() moveLeft = false end)
+        createBtn("RightBtn", "▶", UDim2.new(0.20, 0, 0.63, 0), UDim2.new(0, 48, 0, 48), function() moveRight = true end, function() moveRight = false end)
+        
+        -- Tombol Kanan Bawah untuk Naik/Turun Kamera
+        createBtn("UpBtn", "➕", UDim2.new(0.88, 0, 0.52, 0), UDim2.new(0, 45, 0, 45), function() moveUp = true end, function() moveUp = false end)
+        createBtn("DownBtn", "➖", UDim2.new(0.88, 0, 0.74, 0), UDim2.new(0, 45, 0, 45), function() moveDown = true end, function() moveDown = false end)
+    else
+        if mobileGui then
+            mobileGui:Destroy()
+            mobileGui = nil
+        end
+        moveForward, moveBackward, moveLeft, moveRight, moveUp, moveDown = false, false, false, false, false, false
     end
 end
 
@@ -98,7 +174,7 @@ local TabMods = Window:CreateTab("MODS", "zap")
 local TabServer = Window:CreateTab("SERVER", "refresh-cw")
 
 -- === TAB: CAMERA & COORD ===
-TabCam:CreateSection("Freecam Mode")
+TabCam:CreateSection("Freecam Mode (Mobile Optimized)")
 local CoordParagraph = TabCam:CreateParagraph({Title = "📍 Live Position", Content = "X: 0, Y: 0, Z: 0"})
 
 TabCam:CreateToggle({
@@ -110,6 +186,8 @@ TabCam:CreateToggle({
        local char = Player.Character
        local root = char and char:FindFirstChild("HumanoidRootPart")
        local hum = char and char:FindFirstChild("Humanoid")
+       
+       CreateMobileControls(Value)
        
        if char and root then
            if freecamEnabled then
@@ -132,12 +210,14 @@ TabCam:CreateToggle({
    end,
 })
 
+TabCam:CreateSection("Tools & Utilities")
 TabCam:CreateButton({
    Name = "📋 Copy Camera Coords",
    Callback = function()
        local pos = cam.CFrame.Position
        local formattedCoord = string.format("%.2f, %.2f, %.2f", pos.X, pos.Y, pos.Z)
-       if setclipboard then setclipboard(formattedCoord) end
+       copyToClipboard(formattedCoord)
+       Rayfield:Notify({Title = "Copied!", Content = "Koordinat kamera berhasil disalin.", Duration = 2})
    end,
 })
 
@@ -154,7 +234,7 @@ TabCam:CreateButton({
    Callback = function()
        local coords = {}
        for val in coordInputText:gmatch("([^,]+)") do table.insert(coords, tonumber(val)) end
-       if #coords >= 3 and Player.Character then
+       if #coords >= 3 and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
            Player.Character.HumanoidRootPart.CFrame = CFrame.new(coords[1], coords[2] + 2, coords[3])
        end
    end,
@@ -166,10 +246,8 @@ TabCam:CreateButton({
        if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
            local pos = Player.Character.HumanoidRootPart.Position
            local formattedCoord = string.format("%.2f, %.2f, %.2f", pos.X, pos.Y, pos.Z)
-           if setclipboard then 
-               setclipboard(formattedCoord)
-               Rayfield:Notify({Title = "Copied!", Content = "Posisi karakter disalin ke clipboard.", Duration = 2})
-           end
+           copyToClipboard(formattedCoord)
+           Rayfield:Notify({Title = "Copied!", Content = "Posisi karakter disalin ke clipboard.", Duration = 2})
        end
    end,
 })
@@ -187,7 +265,7 @@ TabPlayer:CreateButton({
        local target = targetPlayerName:lower()
        for _, v in pairs(Players:GetPlayers()) do
            if v.Name:lower():find(target) or v.DisplayName:lower():find(target) then
-               if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+               if v.Character and v.Character:FindFirstChild("HumanoidRootPart") and Player.Character then
                    Player.Character.HumanoidRootPart.CFrame = v.Character.HumanoidRootPart.CFrame
                end
                break
@@ -259,7 +337,7 @@ TabMods:CreateToggle({
 
 TabMods:CreateSlider({
    Name = "Atur Kecepatan",
-   Range = {16, 1000},
+   Range = {16, 500},
    Increment = 1,
    Suffix = " Speed",
    CurrentValue = 16,
@@ -287,9 +365,8 @@ TabServer:CreateButton({
    Callback = function() ServerHop() end,
 })
 
--- === CORE LOGIC & INPUTS ===
+-- === CORE LOGIC & TOUCH ROTATION ===
 
--- 1. Anti-Idle Core (Metode VirtualUser agar tidak AFK tanpa melompat)
 for _, v in pairs(getconnections(Player.Idled)) do v:Disable() end
 
 Player.Idled:Connect(function()
@@ -297,14 +374,40 @@ Player.Idled:Connect(function()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
--- 2. Zoom Logic
+local activeTouches = {}
+UserInputService.TouchStarted:Connect(function(touch, gpe)
+    if freecamEnabled and not gpe then
+        activeTouches[touch] = touch.Position
+    end
+end)
+
+UserInputService.TouchMoved:Connect(function(touch, gpe)
+    if freecamEnabled and activeTouches[touch] and not gpe then
+        local lastPos = activeTouches[touch]
+        local delta = touch.Position - lastPos
+        
+        -- Bagian tengah-kanan layar digunakan untuk menggeser arah pandangan kamera
+        if touch.Position.X > (cam.ViewportSize.X * 0.3) then
+            rotY = rotY - delta.X * dragSens
+            rotX = math.clamp(rotX - delta.Y * dragSens, -80, 80)
+        end
+        
+        activeTouches[touch] = touch.Position
+    end
+end)
+
+UserInputService.TouchEnded:Connect(function(touch)
+    if activeTouches[touch] then
+        activeTouches[touch] = nil
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
     if freecamEnabled and input.UserInputType == Enum.UserInputType.MouseWheel then
         targetFOV = math.clamp(targetFOV - (input.Position.Z * 5), 10, 120)
     end
 end)
 
--- 3. Reconnect Logic
 GuiService.ErrorMessageChanged:Connect(function()
     if getgenv().AutoReconnect then
         task.wait(5)
@@ -312,26 +415,22 @@ GuiService.ErrorMessageChanged:Connect(function()
     end
 end)
 
--- 4. RenderStepped Loop (Freecam & Speed)
 RunService.RenderStepped:Connect(function()
     if freecamEnabled then
         local pos = cam.CFrame.Position
         CoordParagraph:Set({Title = "📍 Live Position", Content = string.format("X: %.2f, Y: %.2f, Z: %.2f", pos.X, pos.Y, pos.Z)})
         
-        -- Smooth Zoom FOV
         cam.FieldOfView = cam.FieldOfView + (targetFOV - cam.FieldOfView) * 0.2
         
-        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-            local delta = UserInputService:GetMouseDelta()
-            rotY = rotY - delta.X * dragSens
-            rotX = math.clamp(rotX - delta.Y * dragSens, -80, 80)
-            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
-        else
-            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-        end
-
         local newRot = CFrame.Angles(0, math.rad(rotY), 0) * CFrame.Angles(math.rad(rotX), 0, 0)
         local moveDir = Vector3.new(0,0,0)
+        
+        if moveForward then moveDir = moveDir + newRot.LookVector end
+        if moveBackward then moveDir = moveDir - newRot.LookVector end
+        if moveLeft then moveDir = moveDir - newRot.RightVector end
+        if moveRight then moveDir = moveDir + newRot.RightVector end
+        if moveUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if moveDown then moveDir = moveDir - Vector3.new(0, 1, 0) end
         
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + newRot.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - newRot.LookVector end
@@ -348,7 +447,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 5. Heartbeat Loop (Fullbright)
 RunService.Heartbeat:Connect(function()
     if fullBrightEnabled then
         Lighting.Brightness = 2
@@ -360,8 +458,9 @@ end)
 
 Rayfield:Notify({
    Title = "VIRGOBOY LOADED",
-   Content = "Script siap digunakan tanpa Auto Jump!",
+   Content = "Kontrol HP Sempurna & Stabil!",
    Duration = 5,
    Image = 4483362458,
 })
+
 loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-7yd7-I-Emote-Script-48024"))()
