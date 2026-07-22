@@ -1,9 +1,9 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "🚀 TELEPORT | VIRGOBOY (MOBILE PERFECT)",
+   Name = "🚀 TELEPORT | VIRGOBOY (PC & MOBILE)",
    LoadingTitle = "VIRGOBOY SCRIPT",
-   LoadingSubtitle = "Loading Mobile Optimized...",
+   LoadingSubtitle = "Loading Cross-Platform Controls...",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "HyperToolV3",
@@ -105,11 +105,11 @@ local function FreezeCharacter(bool)
     end
 end
 
--- === MOBILE CONTROLS GUI ===
+-- === MOBILE CONTROLS GUI (Hanya muncul jika layar sentuh / Mobile) ===
 local mobileGui = nil
 local function CreateMobileControls(state)
     local CoreGui = Player:FindFirstChildOfClass("PlayerGui") or Player:WaitForChild("PlayerGui")
-    if state then
+    if state and UserInputService.TouchEnabled then
         if mobileGui then mobileGui:Destroy() end
         
         mobileGui = Instance.new("ScreenGui")
@@ -149,13 +149,10 @@ local function CreateMobileControls(state)
             end)
         end
 
-        -- Tombol D-Pad Kiri Bawah untuk Navigasi Maju/Mundur/Kiri/Kanan
         createBtn("ForwardBtn", "▲", UDim2.new(0.12, 0, 0.52, 0), UDim2.new(0, 48, 0, 48), function() moveForward = true end, function() moveForward = false end)
         createBtn("BackwardBtn", "▼", UDim2.new(0.12, 0, 0.74, 0), UDim2.new(0, 48, 0, 48), function() moveBackward = true end, function() moveBackward = false end)
         createBtn("LeftBtn", "◀", UDim2.new(0.04, 0, 0.63, 0), UDim2.new(0, 48, 0, 48), function() moveLeft = true end, function() moveLeft = false end)
         createBtn("RightBtn", "▶", UDim2.new(0.20, 0, 0.63, 0), UDim2.new(0, 48, 0, 48), function() moveRight = true end, function() moveRight = false end)
-        
-        -- Tombol Kanan Bawah untuk Naik/Turun Kamera
         createBtn("UpBtn", "➕", UDim2.new(0.88, 0, 0.52, 0), UDim2.new(0, 45, 0, 45), function() moveUp = true end, function() moveUp = false end)
         createBtn("DownBtn", "➖", UDim2.new(0.88, 0, 0.74, 0), UDim2.new(0, 45, 0, 45), function() moveDown = true end, function() moveDown = false end)
     else
@@ -174,7 +171,7 @@ local TabMods = Window:CreateTab("MODS", "zap")
 local TabServer = Window:CreateTab("SERVER", "refresh-cw")
 
 -- === TAB: CAMERA & COORD ===
-TabCam:CreateSection("Freecam Mode (Mobile Optimized)")
+TabCam:CreateSection("Freecam Mode (PC & Mobile)")
 local CoordParagraph = TabCam:CreateParagraph({Title = "📍 Live Position", Content = "X: 0, Y: 0, Z: 0"})
 
 TabCam:CreateToggle({
@@ -365,7 +362,7 @@ TabServer:CreateButton({
    Callback = function() ServerHop() end,
 })
 
--- === CORE LOGIC & TOUCH ROTATION ===
+-- === CORE LOGIC & CROSS-PLATFORM INPUTS ===
 
 for _, v in pairs(getconnections(Player.Idled)) do v:Disable() end
 
@@ -374,6 +371,7 @@ Player.Idled:Connect(function()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
+-- Rotasi Sentuh untuk HP
 local activeTouches = {}
 UserInputService.TouchStarted:Connect(function(touch, gpe)
     if freecamEnabled and not gpe then
@@ -386,7 +384,6 @@ UserInputService.TouchMoved:Connect(function(touch, gpe)
         local lastPos = activeTouches[touch]
         local delta = touch.Position - lastPos
         
-        -- Bagian tengah-kanan layar digunakan untuk menggeser arah pandangan kamera
         if touch.Position.X > (cam.ViewportSize.X * 0.3) then
             rotY = rotY - delta.X * dragSens
             rotX = math.clamp(rotX - delta.Y * dragSens, -80, 80)
@@ -422,9 +419,20 @@ RunService.RenderStepped:Connect(function()
         
         cam.FieldOfView = cam.FieldOfView + (targetFOV - cam.FieldOfView) * 0.2
         
+        -- Rotasi Mouse untuk PC (Tahan Klik Kanan + Geser Mouse)
+        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            local delta = UserInputService:GetMouseDelta()
+            rotY = rotY - delta.X * dragSens
+            rotX = math.clamp(rotX - delta.Y * dragSens, -80, 80)
+            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+        else
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        end
+
         local newRot = CFrame.Angles(0, math.rad(rotY), 0) * CFrame.Angles(math.rad(rotX), 0, 0)
         local moveDir = Vector3.new(0,0,0)
         
+        -- Tombol Navigasi HP (Floating Controls)
         if moveForward then moveDir = moveDir + newRot.LookVector end
         if moveBackward then moveDir = moveDir - newRot.LookVector end
         if moveLeft then moveDir = moveDir - newRot.RightVector end
@@ -432,6 +440,7 @@ RunService.RenderStepped:Connect(function()
         if moveUp then moveDir = moveDir + Vector3.new(0, 1, 0) end
         if moveDown then moveDir = moveDir - Vector3.new(0, 1, 0) end
         
+        -- Tombol Keyboard PC (W, A, S, D, Q, E)
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + newRot.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - newRot.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - newRot.RightVector end
@@ -458,7 +467,7 @@ end)
 
 Rayfield:Notify({
    Title = "VIRGOBOY LOADED",
-   Content = "Kontrol HP Sempurna & Stabil!",
+   Content = "Kontrol PC & HP Aktif Sempurna!",
    Duration = 5,
    Image = 4483362458,
 })
