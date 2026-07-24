@@ -39,6 +39,10 @@ local listMap = {
         Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoboyScript/Script/refs/heads/main/Pop_Box.lua"))()]]
     },
     {
+        Nama = "🧑‍🦰 Tokyo Anime",
+        Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoboyScript/Script/refs/heads/main/TokyoAnime.lua"))()]]
+    },
+    {
         Nama = "👩‍🦰 Kingdom of essentia Tycoon",
         Script = [[loadstring(game:HttpGet("https://raw.githubusercontent.com/VirgoScript/Roblox/refs/heads/main/Essentia.lua"))()]]
     },
