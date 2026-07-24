@@ -70,11 +70,8 @@ local function getRedSpawner()
                 for _, s in ipairs(seq.Spawners:GetChildren()) do
                     if s.Name:find("ClosableSpawner") then
                         local c = s:FindFirstChild("CaptureZone") and s.CaptureZone:FindFirstChild("Center")
-                        -- Ambil yang pertama ditemukan yang:
-                        -- 1. Transparent < 1 (visible)
-                        -- 2. Bukan warna hijau (0, 255, 0) = belum dikerjakan
                         if c and c.Transparency < 1 and c.Color ~= Color3.fromRGB(0, 255, 0) then
-                            return c -- Return spawner PERTAMA yang ditemukan (bukan terdekat)
+                            return c
                         end
                     end
                 end
@@ -82,28 +79,6 @@ local function getRedSpawner()
         end
     end
     return nil
-end
-
-local function runCloseSpawner()
-    local lp = Players.LocalPlayer
-    local character = lp.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    
-    if not rootPart or not humanoid then return end
-    
-    local targetPart = getRedSpawner() -- Menggunakan fungsi spesifik Anda
-    if targetPart then
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        
-        -- Instant teleport dengan offset (0, 0, 0 = di tengah spawner)
-        local targetPos = targetPart.CFrame * CFrame.new(0, 0, 0)
-        rootPart.CFrame = targetPos
-        
-        -- Instant velocity: Tambahkan kecepatan instan setelah teleport
-        local direction = (targetPart.Position - rootPart.Position).Unit
-        rootPart.AssemblyLinearVelocity = direction * 100 -- Kecepatan 100 units/second
-    end
 end
 
 -- Hapus UI lama jika ada
@@ -154,7 +129,7 @@ gui.Name = "AceSniperUI"
 gui.ResetOnSpawn = false
 gui.Parent = coreGui
 
-local FULL_H = 380 -- Dinaikkan dari 210 untuk menampung tombol baru
+local FULL_H = 380 
 local MINI_H = 42
 
 -- Main Frame
@@ -250,11 +225,57 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------
--- FITUR INSTANT KILL V2 (SISTEM LOOPING ULTRA FAST) + TIMER
+-- FITUR INSTANT KILL (BARU SESUAI PERMINTAAN ANDA)
 ---------------------------------------------------------
-local isToggled = false
-local killStartTime = 0
+local enemiesFolder = nil
+task.spawn(function()
+    while gui.Parent and not enemiesFolder do
+        local alives = workspace:FindFirstChild("Alives")
+        if alives then enemiesFolder = alives:FindFirstChild("Enemies") end
+        if not enemiesFolder then
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("Folder") and v.Name == "Enemies" and v.Parent and v.Parent.Name == "Alives" then
+                    enemiesFolder = v
+                    break
+                end
+            end
+        end
+        task.wait(0.5)
+    end
+end)
 
+local function getHumanoid(obj)
+    local m = obj
+    if obj:IsA("BasePart") then m = obj.Parent end
+    if m and (m:IsA("Model") or m:IsA("Folder")) then
+        return m:FindFirstChildWhichIsA("Humanoid")
+    end
+end
+
+local function killEn(d)
+    if not d.Humanoid or d.Humanoid.Health <= 0 then return end
+    local hh = d.Humanoid
+    pcall(function()
+        for _, tag in ipairs({"creator", "killTag", "source"}) do
+            local obj = hh:FindFirstChild(tag) or Instance.new("ObjectValue", hh)
+            obj.Name = tag
+            obj.Value = LP
+        end
+        hh:TakeDamage(hh.MaxHealth + 100)
+    end)
+end
+
+local function killAll()
+    if not enemiesFolder then return end
+    for _, v in ipairs(enemiesFolder:GetChildren()) do
+        local hh = getHumanoid(v)
+        if hh and hh.Health > 0 then
+            killEn({Model = v, Humanoid = hh})
+        end
+    end
+end
+
+local isToggled = false
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(1, -24, 0, 30)
 toggleBtn.Position = UDim2.new(0, 12, 0, 42)
@@ -269,69 +290,12 @@ toggleBtn.Parent = main
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 animStroke(toggleBtn, 1)
 
-local function getEnemiesFolder()
-    local alives = workspace:WaitForChild("Alives", 5)
-    return alives and alives:WaitForChild("Enemies", 5) or nil
-end
-
--- Eksekusi pembunuhan instan tanpa penundaan internal
-local function killEnemy(enemy)
-    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-    local rootPart = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso") or enemy:FindFirstChild("UpperTorso")
-    
-    -- Metode 1: Hancurkan Neck joint (Instan mati secara struktural)
-    local head = enemy:FindFirstChild("Head")
-    if head then
-        local neck = head:FindFirstChild("Neck") or head:FindFirstChildOfClass("Motor6D") or head:FindFirstChildOfClass("Weld")
-        if neck then 
-            neck:Destroy() 
-        end
-    end
-    
-    -- Metode 2: Set Health ke 0
-    if humanoid and humanoid.Health > 0 then
-        humanoid.Health = 0
-    end
-    
-    -- Metode 3: Teleport part ke Void jika server lambat memperbarui status mati
-    if rootPart and rootPart:IsA("BasePart") then
-        rootPart.CFrame = CFrame.new(0, -99999, 0)
-    end
-end
-
--- Thread Loop Utama yang berjalan di background
+-- Loop Instant Kill Baru
 task.spawn(function()
     while true do
-        task.wait(0.01) -- Loop berjalan sangat cepat setiap 10 milidetik
+        task.wait(0.1)
         if isToggled then
-            local enemiesFolder = getEnemiesFolder()
-            if enemiesFolder then
-                local enemies = enemiesFolder:GetChildren()
-                for i = 1, #enemies do
-                    local enemy = enemies[i]
-                    -- Hanya eksekusi jika musuh valid dan belum mati
-                    local hum = enemy:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
-                        killEnemy(enemy)
-                    elseif not hum then
-                        -- Jaga-jaga jika humanoid belum termuat sepenuhnya
-                        killEnemy(enemy)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- Thread Pengelola Timer Real-time
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if isToggled then
-            local elapsed = math.floor(os.clock() - killStartTime)
-            local minutes = math.floor(elapsed / 60)
-            local seconds = elapsed % 60
-            toggleBtn.Text = string.format("Efek ON dalam 1 menit (%02d:%02d)", minutes, seconds)
+            pcall(killAll)
         end
     end
 end)
@@ -339,9 +303,8 @@ end)
 toggleBtn.MouseButton1Click:Connect(function()
     isToggled = not isToggled
     if isToggled then
-        killStartTime = os.clock() -- Catat waktu mulai aktif
         tweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 60, 45)}):Play()
-        toggleBtn.Text = "Efek ON dalam 1 menit (00:00)"
+        toggleBtn.Text = "Instant Kill: ON"
         toggleBtn.TextColor3 = Color3.fromRGB(80, 220, 120)
     else
         tweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 40)}):Play()
@@ -450,10 +413,9 @@ end)
 ---------------------------------------------------------
 -- FITUR CLOSE SPAWNER (CAPTUREZONE AUTO TELEPORT)
 ---------------------------------------------------------
-local isCloseSpawnerToggled = false
 local closeSpawnerBtn = Instance.new("TextButton")
 closeSpawnerBtn.Size = UDim2.new(1, -24, 0, 30)
-closeSpawnerBtn.Position = UDim2.new(0, 12, 0, 114) -- Ditempatkan di atas WalkSpeed
+closeSpawnerBtn.Position = UDim2.new(0, 12, 0, 114)
 closeSpawnerBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 closeSpawnerBtn.Text = "Close Spawner"
 closeSpawnerBtn.TextColor3 = Color3.fromRGB(220, 80, 80)
@@ -465,53 +427,6 @@ closeSpawnerBtn.Parent = main
 Instance.new("UICorner", closeSpawnerBtn).CornerRadius = UDim.new(0, 6)
 animStroke(closeSpawnerBtn, 1)
 
-local currentTargetSpawner = nil 
-
-local function runCloseSpawner()
-    local lp = Players.LocalPlayer
-    local character = lp.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    
-    if not rootPart or not humanoid then return end
-
-    -- 1. CEK: Apakah target saat ini masih ada dan belum selesai?
-    if currentTargetSpawner then
-        -- Jika target hilang dari workspace, sudah hijau (selesai), atau transparan (sudah ditutup), lepas kuncinya
-        if not currentTargetSpawner:IsDescendantOf(workspace) or 
-           currentTargetSpawner.Transparency >= 1 or 
-           currentTargetSpawner.Color == Color3.fromRGB(0, 255, 0) then
-            currentTargetSpawner = nil
-        end
-    end
-
-    -- 2. JIKA BELUM ADA TARGET, baru cari yang baru
-    if not currentTargetSpawner then
-        currentTargetSpawner = getRedSpawner()
-    end
-
-    -- 3. EKSEKUSI: Pindah ke target yang terkunci
-    if currentTargetSpawner then
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        -- Teleport dengan offset
-        rootPart.CFrame = currentTargetSpawner.CFrame * CFrame.new(0, 0, 0)
-        
-        -- 4. INSTANT VELOCITY: Tambahkan kecepatan instant setelah teleport
-        local direction = (currentTargetSpawner.Position - rootPart.Position).Unit
-        rootPart.AssemblyLinearVelocity = direction * 100 -- Kecepatan 100 units/second
-    end
-end
-
--- [UPDATE LOOP UTAMA]
-task.spawn(function()
-    while true do
-        -- Interval diperpendek agar lebih responsif saat berpindah ke spawner berikutnya
-        task.wait(0.5) 
-        if isCloseSpawnerToggled then
-            pcall(runCloseSpawner)
-        end
-    end
-end)
 local function isRealActive(part)
     if part.Transparency >= 1 then return false end
     if part.Position.Y < -500 then return false end
@@ -519,7 +434,6 @@ local function isRealActive(part)
 end
 
 local function getNextActiveCenter(rootPart)
-    -- Ambil yang PERTAMA ditemukan yang aktif (bukan yang terdekat)
     for _, desc in pairs(workspace:GetDescendants()) do
         if desc.Name == "CaptureZone" then
             local centerPart = desc:FindFirstChild("Center")
@@ -527,7 +441,7 @@ local function getNextActiveCenter(rootPart)
                 if isRealActive(centerPart) then
                     local distance = (centerPart.Position - rootPart.Position).Magnitude
                     if distance > 10 then
-                        return centerPart -- Return PERTAMA yang ditemukan (bukan terdekat)
+                        return centerPart
                     end
                 end
             end
@@ -547,32 +461,25 @@ local function runCloseSpawner()
     local targetPart = getNextActiveCenter(rootPart)
     if targetPart then
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        -- Teleport dengan CFrame multiplication
         rootPart.CFrame = targetPart.CFrame * CFrame.new(0, 0, 0)
-        
-        -- Instant velocity: Arah ke spawner dengan kecepatan instant
         local direction = (targetPart.Position - rootPart.Position).Unit
-        rootPart.AssemblyLinearVelocity = direction * 100 -- Kecepatan 100 units/second
+        rootPart.AssemblyLinearVelocity = direction * 100
     end
 end
 
--- Tombol ini sekarang tidak lagi bersifat Toggle (ON/OFF), melainkan aksi instan
 closeSpawnerBtn.MouseButton1Click:Connect(function()
-    -- Langsung panggil fungsi teleport 1x
     pcall(runCloseSpawner)
-    
-    -- Efek visual klik
     tweenService:Create(closeSpawnerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 60, 45)}):Play()
     task.wait(0.2)
     tweenService:Create(closeSpawnerBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 40)}):Play()
 end)
+
 ---------------------------------------------------------
 -- FITUR AUTO TELEPORT TRIGGER
 ---------------------------------------------------------
-local isTriggerToggled = false
 local triggerBtn = Instance.new("TextButton")
 triggerBtn.Size = UDim2.new(1, -24, 0, 30)
-triggerBtn.Position = UDim2.new(0, 12, 0, 150) -- Sesuaikan posisi agar pas
+triggerBtn.Position = UDim2.new(0, 12, 0, 150)
 triggerBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 triggerBtn.Text = "Teleport to Next Room"
 triggerBtn.TextColor3 = Color3.fromRGB(220, 80, 80)
@@ -584,9 +491,7 @@ triggerBtn.Parent = main
 Instance.new("UICorner", triggerBtn).CornerRadius = UDim.new(0, 6)
 animStroke(triggerBtn, 1)
 
-local visitedTriggers = {} -- Variabel pelacak agar tidak balik ke belakang
-
-local visitedTriggers = {} -- Variabel pelacak
+local visitedTriggers = {}
 
 local function teleportToNearestTrigger()
     local lp = Players.LocalPlayer
@@ -597,7 +502,6 @@ local function teleportToNearestTrigger()
     local nearestTrigger = nil
     local shortestDistance = math.huge
 
-    -- Cari trigger terdekat yang belum dikunjungi
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj.Name == "Trigger" and obj:IsA("BasePart") and not visitedTriggers[obj] then
             local dist = (obj.Position - hrp.Position).Magnitude
@@ -609,21 +513,15 @@ local function teleportToNearestTrigger()
     end
 
     if nearestTrigger then
-        visitedTriggers[nearestTrigger] = true -- Tandai sudah dikunjungi
+        visitedTriggers[nearestTrigger] = true
         hrp.CFrame = nearestTrigger.CFrame
-        print("Teleport ke: " .. nearestTrigger:GetFullName())
     else
-        print("Semua Trigger sudah dikunjungi! Reset daftar...")
-        visitedTriggers = {} -- Reset jika semua sudah dikunjungi
+        visitedTriggers = {}
     end
 end
 
--- Event Klik Tombol
 triggerBtn.MouseButton1Click:Connect(function()
-    -- Langsung panggil fungsi teleport saat tombol diklik
     teleportToNearestTrigger()
-    
-    -- Efek visual klik agar terasa responsif
     triggerBtn.BackgroundColor3 = Color3.fromRGB(50, 70, 55)
     task.wait(0.2)
     triggerBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
@@ -638,9 +536,9 @@ local vim = game:GetService("VirtualInputManager")
 local autoClickBtn = Instance.new("TextButton")
 autoClickBtn.Size = UDim2.new(1, -24, 0, 30)
 autoClickBtn.Position = UDim2.new(0, 12, 0, 186)
-autoClickBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40) -- Warna gelap (OFF)
+autoClickBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 autoClickBtn.Text = "Auto Klik Tombol Klaim: OFF"
-autoClickBtn.TextColor3 = Color3.fromRGB(220, 80, 80) -- Warna merah (OFF)
+autoClickBtn.TextColor3 = Color3.fromRGB(220, 80, 80)
 autoClickBtn.Font = Enum.Font.GothamBold
 autoClickBtn.TextSize = 12
 autoClickBtn.BorderSizePixel = 0
@@ -688,14 +586,15 @@ autoClickBtn.MouseButton1Click:Connect(function()
     autoClickBtn.TextColor3 = running and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(220, 80, 80)
     autoClickBtn.BackgroundColor3 = running and Color3.fromRGB(40, 60, 45) or Color3.fromRGB(35, 35, 40)
 end)
+
 ---------------------------------------------------------
--- FITUR WALKSPEED SLIDER (POSISI DIGESER KE BAWAH)
+-- FITUR WALKSPEED SLIDER
 ---------------------------------------------------------
 local targetWalkSpeed = 16
 
 local wsLabel = Instance.new("TextLabel")
 wsLabel.Size = UDim2.new(1, -24, 0, 14)
-wsLabel.Position = UDim2.new(0, 12, 0, 216) -- Digeser ke bawah
+wsLabel.Position = UDim2.new(0, 12, 0, 216)
 wsLabel.BackgroundTransparency = 1
 wsLabel.Text = "WalkSpeed: 16"
 wsLabel.Font = Enum.Font.GothamBold
@@ -706,7 +605,7 @@ wsLabel.Parent = main
 
 local sliderMain = Instance.new("Frame")
 sliderMain.Size = UDim2.new(1, -24, 0, 6)
-sliderMain.Position = UDim2.new(0, 12, 0, 231) -- Digeser ke bawah
+sliderMain.Position = UDim2.new(0, 12, 0, 231)
 sliderMain.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 sliderMain.BorderSizePixel = 0
 sliderMain.Parent = main
@@ -796,8 +695,6 @@ local function createSkillToggle(name, globVar, yPos)
 
     btn.MouseButton1Click:Connect(function()
         _G[globVar] = not _G[globVar]
-        print(name .. " diubah ke: " .. tostring(_G[globVar])) -- DEBUG: Lihat konsol F9
-        
         local state = _G[globVar]
         btn.Text = name .. (state and ": ON" or ": OFF")
         btn.TextColor3 = state and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(220, 80, 80)
@@ -805,26 +702,22 @@ local function createSkillToggle(name, globVar, yPos)
     end)
 end
 
--- Menambahkan tombol ke UI (sesuaikan Y pos berdasarkan tinggi elemen di atasnya)
 createSkillToggle("Auto Punch", "UseQuick", 251)
 createSkillToggle("Auto Subskill", "UseHeavy", 287)
 createSkillToggle("Auto Ultimate", "UseSpecial", 322)
 
--- [LOOP CORE UNTUK SKILL]
 task.spawn(function()
     while true do
         task.wait(0.1)
         if (_G.UseQuick or _G.UseHeavy or _G.UseSpecial) then
-            local target = getTarget() -- Menggunakan fungsi getTarget yang sudah benar
+            local target = getTarget()
             if target and target:FindFirstChild("HumanoidRootPart") then
                 local myHRP = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
                 local targetHRP = target.HumanoidRootPart
                 
                 if myHRP then
-                    -- TELEPORT: Pindah ke posisi musuh (sedikit di depan agar tidak tumpang tindih)
                     myHRP.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2) 
                     
-                    -- EKSEKUSI SKILL
                     if _G.UseQuick and os.clock() - lQ >= 0.15 then 
                         lQ = os.clock() fireWCSSkill(getActiveSkill("Light"), 1) 
                     end
