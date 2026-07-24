@@ -129,7 +129,7 @@ gui.Name = "AceSniperUI"
 gui.ResetOnSpawn = false
 gui.Parent = coreGui
 
-local FULL_H = 380 
+local FULL_H = 350 -- Disesuaikan ukurannya karena ada 1 tombol yang dihapus
 local MINI_H = 42
 
 -- Main Frame
@@ -225,7 +225,7 @@ minBtn.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------
--- FITUR INSTANT KILL (BARU SESUAI PERMINTAAN ANDA)
+-- FITUR INSTANT KILL
 ---------------------------------------------------------
 local enemiesFolder = nil
 task.spawn(function()
@@ -290,7 +290,6 @@ toggleBtn.Parent = main
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 animStroke(toggleBtn, 1)
 
--- Loop Instant Kill Baru
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -528,73 +527,13 @@ triggerBtn.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------
--- FITUR Auto Klik Tombol Klaim (UGC CLAIM)
----------------------------------------------------------
-local running = false 
-local vim = game:GetService("VirtualInputManager")
-
-local autoClickBtn = Instance.new("TextButton")
-autoClickBtn.Size = UDim2.new(1, -24, 0, 30)
-autoClickBtn.Position = UDim2.new(0, 12, 0, 186)
-autoClickBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-autoClickBtn.Text = "Auto Klik Tombol Klaim: OFF"
-autoClickBtn.TextColor3 = Color3.fromRGB(220, 80, 80)
-autoClickBtn.Font = Enum.Font.GothamBold
-autoClickBtn.TextSize = 12
-autoClickBtn.BorderSizePixel = 0
-autoClickBtn.AutoButtonColor = false
-autoClickBtn.Parent = main
-Instance.new("UICorner", autoClickBtn).CornerRadius = UDim.new(0, 6)
-animStroke(autoClickBtn, 1)
-
-local function simulateManualClick(button)
-    local absPos = button.AbsolutePosition
-    local absSize = button.AbsoluteSize
-    local clickX = absPos.X + (absSize.X / 2)
-    local clickY = absPos.Y + (absSize.Y / 2)
-    
-    pcall(function()
-        vim:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
-        task.wait(0.05)
-        vim:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
-    end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if running then
-            local player = Players.LocalPlayer
-            local playerGui = player and player:FindFirstChild("PlayerGui")
-            local lobbyUI = playerGui and playerGui:FindFirstChild("LobbyUI")
-            local ugcProgression = lobbyUI and lobbyUI:FindFirstChild("UGCProgression")
-            local bottomHolder = ugcProgression and ugcProgression:FindFirstChild("BottomHolder")
-            local claimableBtn = bottomHolder and bottomHolder:FindFirstChild("ClaimableBtn")
-            
-            if claimableBtn and claimableBtn.Visible and claimableBtn.AbsoluteSize.X > 0 then
-                if bottomHolder.Visible and ugcProgression.Visible and lobbyUI.Enabled then
-                    simulateManualClick(claimableBtn)
-                end
-            end
-        end
-    end
-end)
-
-autoClickBtn.MouseButton1Click:Connect(function()
-    running = not running
-    autoClickBtn.Text = running and "Auto Klik Tombol Klaim: ON" or "Auto Klik Tombol Klaim: OFF"
-    autoClickBtn.TextColor3 = running and Color3.fromRGB(80, 220, 120) or Color3.fromRGB(220, 80, 80)
-    autoClickBtn.BackgroundColor3 = running and Color3.fromRGB(40, 60, 45) or Color3.fromRGB(35, 35, 40)
-end)
-
----------------------------------------------------------
 -- FITUR WALKSPEED SLIDER
 ---------------------------------------------------------
 local targetWalkSpeed = 16
 
 local wsLabel = Instance.new("TextLabel")
 wsLabel.Size = UDim2.new(1, -24, 0, 14)
-wsLabel.Position = UDim2.new(0, 12, 0, 216)
+wsLabel.Position = UDim2.new(0, 12, 0, 186)
 wsLabel.BackgroundTransparency = 1
 wsLabel.Text = "WalkSpeed: 16"
 wsLabel.Font = Enum.Font.GothamBold
@@ -605,7 +544,7 @@ wsLabel.Parent = main
 
 local sliderMain = Instance.new("Frame")
 sliderMain.Size = UDim2.new(1, -24, 0, 6)
-sliderMain.Position = UDim2.new(0, 12, 0, 231)
+sliderMain.Position = UDim2.new(0, 12, 0, 201)
 sliderMain.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 sliderMain.BorderSizePixel = 0
 sliderMain.Parent = main
@@ -702,9 +641,9 @@ local function createSkillToggle(name, globVar, yPos)
     end)
 end
 
-createSkillToggle("Auto Punch", "UseQuick", 251)
-createSkillToggle("Auto Subskill", "UseHeavy", 287)
-createSkillToggle("Auto Ultimate", "UseSpecial", 322)
+createSkillToggle("Auto Punch", "UseQuick", 221)
+createSkillToggle("Auto Subskill", "UseHeavy", 257)
+createSkillToggle("Auto Ultimate", "UseSpecial", 292)
 
 task.spawn(function()
     while true do
